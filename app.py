@@ -3,7 +3,7 @@ import tempfile
 import streamlit as st
 import whisper
 import moviepy as mp
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 # Page Configuration
 st.set_page_config(page_title="Zwe Video Translation", page_icon="🎬", layout="wide")
@@ -17,7 +17,7 @@ source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယိ�
 target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English"])
 model_size = st.sidebar.selectbox("AI Model Size (Whisper)", ["tiny", "base", "small"])
 
-# Target Language mapping for googletrans
+# Set target code for deep-translator
 if "မြန်မာ" in target_lang:
     selected_lang_code = "my"
 else:
@@ -25,7 +25,7 @@ else:
 
 source_lang_map = {
     "English (အင်္ဂလိပ်)": "en",
-    "Chinese (တရုတ်)": "zh-cn",
+    "Chinese (တရုတ်)": "zh-CN",
     "Japanese (ဂျပန်)": "ja",
     "Korean (ကိုရီးယား)": "ko",
     "Auto-detect": "auto"
@@ -61,16 +61,16 @@ if uploaded_file is not None:
             model = whisper.load_model(model_size)
             
             if selected_source_lang != "auto":
-                result = model.transcribe(audio_path, language=selected_source_lang, fp16=False)
+                w_lang = selected_source_lang.split("-")[0].lower()
+                result = model.transcribe(audio_path, language=w_lang, fp16=False)
             else:
                 result = model.transcribe(audio_path, fp16=False)
                 
             segments = result["segments"]
             
-            # Step 3: Translation using googletrans Translator
+            # Step 3: Translation using deep-translator
             st.write(f"🌍 စာသားများကို {target_lang} သို့ ဘာသာပြန်နေသည်...")
             
-            translator = Translator()
             translated_segments = []
             
             for seg in segments:
@@ -78,8 +78,8 @@ if uploaded_file is not None:
                 if not original_text:
                     continue
                 try:
-                    translation = translator.translate(original_text, dest=selected_lang_code)
-                    translated_text = translation.text
+                    # Translate using deep-translator
+                    translated_text = GoogleTranslator(source='auto', target=selected_lang_code).translate(original_text)
                 except Exception:
                     translated_text = original_text
                     
