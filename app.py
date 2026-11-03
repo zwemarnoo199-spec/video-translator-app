@@ -19,14 +19,15 @@ source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယိ�
 target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English"])
 model_size = st.sidebar.selectbox("AI Model Size (Whisper)", ["tiny", "base", "small"])
 
-# Target Language code
+# Target Language code for translation
 if "မြန်မာ" in target_lang:
     selected_lang_code = "my"
 else:
     selected_lang_code = "en"
 
+# Whisper compatible language codes (short codes only)
 source_lang_map = {
-    "Chinese (တရုတ်)": "zh-cn",
+    "Chinese (တရုတ်)": "zh",
     "English (အင်္ဂလိပ်)": "en",
     "Japanese (ဂျပန်)": "ja",
     "Korean (ကိုရီးယား)": "ko",
@@ -34,7 +35,7 @@ source_lang_map = {
 }
 selected_source_lang = source_lang_map[source_lang_option]
 
-# Direct free Google Translate function to avoid translation API blocks
+# Direct free Google Translate function
 def translate_text(text, target='my'):
     if not text.strip():
         return text
@@ -146,3 +147,4 @@ if uploaded_file is not None:
                 os.remove(audio_path)
         except Exception as e:
             pass
+                
