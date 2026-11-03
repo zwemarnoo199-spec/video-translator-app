@@ -13,15 +13,24 @@ st.markdown("ဗီဒီယိုဖိုင် တင်လိုက်တာ
 
 # Sidebar - Settings
 st.sidebar.header("⚙️ Settings")
-target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English", "Chinese"])
+source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယို ဘာသာစကား (Source Language)", ["English (အင်္ဂလိပ်)", "Chinese (တရုတ်)", "Japanese (ဂျပန်)", "Korean (ကိုရီးယား)", "Auto-detect"])
+target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English"])
 model_size = st.sidebar.selectbox("AI Model Size (Whisper)", ["tiny", "base", "small"])
 
 lang_code_map = {
     "Burmese (မြန်မာ)": "my",
-    "English": "en",
-    "Chinese": "zh-cn"
+    "English": "en"
 }
 selected_lang_code = lang_code_map[target_lang]
+
+source_lang_map = {
+    "English (အင်္ဂလိပ်)": "en",
+    "Chinese (တရုတ်)": "zh-CN",
+    "Japanese (ဂျပန်)": "ja",
+    "Korean (ကိုရီးယား)": "ko",
+    "Auto-detect": "auto"
+}
+selected_source_lang = source_lang_map[source_lang_option]
 
 # Main File Uploader
 uploaded_file = st.file_uploader("ဗီဒီယိုဖိုင် တင်ပါ (MP4, MKV, MOV)", type=["mp4", "mkv", "mov"])
@@ -36,7 +45,7 @@ if uploaded_file is not None:
     if st.button("🚀 ဗီဒီယို ဘာသာပြန်ခြင်း စတင်ရန်"):
         with st.status("🔄 AI လုပ်ဆောင်နေပါပြီ...", expanded=True) as status:
             
-            # Step 1: Extract Audio Safely as WAV (Best for Whisper)
+            # Step 1: Extract Audio Safely as WAV
             st.write("🔊 ဗီဒီယိုမှ အသံဖိုင် (Audio) ကို ထုတ်ယူနေသည်...")
             audio_path = video_path + ".wav"
             
@@ -50,16 +59,25 @@ if uploaded_file is not None:
             # Step 2: Speech to Text (Whisper)
             st.write(f"✍️ Whisper Model ({model_size}) ဖြင့် အသံများကို စာသားပြောင်းနေသည်...")
             model = whisper.load_model(model_size)
-            result = model.transcribe(audio_path, fp16=False)
+            
+            if selected_source_lang != "auto":
+                w_lang = selected_source_lang.split("-")[0].lower()
+                result = model.transcribe(audio_path, language=w_lang, fp16=False)
+            else:
+                result = model.transcribe(audio_path, fp16=False)
+                
             segments = result["segments"]
             
             # Step 3: Translation using deep-translator
             st.write(f"🌍 စာသားများကို {target_lang} သို့ ဘာသာပြန်နေသည်...")
+            
             translator = GoogleTranslator(source='auto', target=selected_lang_code)
             translated_segments = []
             
             for seg in segments:
-                original_text = seg["text"]
+                original_text = seg["text"].strip()
+                if not original_text:
+                    continue
                 try:
                     translated_text = translator.translate(original_text)
                 except Exception:
@@ -68,13 +86,12 @@ if uploaded_file is not None:
                 translated_segments.append({
                     "start": seg["start"],
                     "end": seg["end"],
-                    "text": translated_text
+                    "text": translated_text if translated_text else original_text
                 })
             
             status.update(label="✅ အောင်မြင်စွာ ပြီးဆုံးပါပြီ!", state="complete", expanded=False)
         
         st.success("🎉 ဘာသာပြန်ခြင်း ပြီးစီးပါပြီ။ Subtitle များကို အောက်တွင် ကြည့်ရှုနိုင်ပါပြီ။")
-        
         # Display Subtitles
         st.subheader("📋 Generated Subtitles")
         
@@ -98,7 +115,8 @@ if uploaded_file is not None:
             {txt}
             """)
             st.divider()
-            # Download Button for SRT File
+
+        # Download Button for SRT File
         st.download_button(
             label="📥 Subtitle ဖိုင် (.SRT) ကို Download ရယူရန်",
             data=srt_content,
