@@ -397,7 +397,17 @@ st.markdown(
                     except OSError:
                         pass
 
+finally:
 
+    if video_clip is not None:
+        video_clip.close()
+
+    for path in [video_path, audio_path]:
+        if path and os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 # =====================================
 # FOOTER
 # =====================================
