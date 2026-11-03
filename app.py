@@ -27,7 +27,6 @@ selected_lang_code = lang_code_map[target_lang]
 uploaded_file = st.file_uploader("ဗီဒီယိုဖိုင် တင်ပါ (MP4, MKV, MOV)", type=["mp4", "mkv", "mov"])
 
 if uploaded_file is not None:
-    # Use temporary files safely for cloud environments
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
     tfile.write(uploaded_file.read())
     video_path = tfile.name
@@ -37,20 +36,21 @@ if uploaded_file is not None:
     if st.button("🚀 ဗီဒီယို ဘာသာပြန်ခြင်း စတင်ရန်"):
         with st.status("🔄 AI လုပ်ဆောင်နေပါပြီ...", expanded=True) as status:
             
-            # Step 1: Extract Audio Safely
+            # Step 1: Extract Audio Safely as WAV (Best for Whisper)
             st.write("🔊 ဗီဒီယိုမှ အသံဖိုင် (Audio) ကို ထုတ်ယူနေသည်...")
-            audio_tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
-            audio_path = audio_tfile.name
-            audio_tfile.close()
+            audio_path = video_path + ".wav"
             
             video_clip = mp.VideoFileClip(video_path)
-            audio_clip = video_clip.audio
-            audio_clip.write_audiofile(audio_path, logger=None)
+            if video_clip.audio is not None:
+                video_clip.audio.write_audiofile(audio_path, fps=16000, nbytes=2, codec='pcm_s16le', logger=None)
+            else:
+                st.error("❌ ဤဗီဒီယိုဖိုင်တွင် အသံ (Audio) မပါရှိပါ။")
+                st.stop()
             
             # Step 2: Speech to Text (Whisper)
             st.write(f"✍️ Whisper Model ({model_size}) ဖြင့် အသံများကို စာသားပြောင်းနေသည်...")
             model = whisper.load_model(model_size)
-            result = model.transcribe(audio_path)
+            result = model.transcribe(audio_path, fp16=False)
             segments = result["segments"]
             
             # Step 3: Translation using deep-translator
@@ -106,10 +106,8 @@ if uploaded_file is not None:
             mime="text/plain"
         )
 
-        # Cleanup clips and temporary files safely
+        # Cleanup temporary files safely
         try:
-            if 'audio_clip' in locals() and audio_clip:
-                audio_clip.close()
             if 'video_clip' in locals() and video_clip:
                 video_clip.close()
             if os.path.exists(video_path): 
@@ -118,3 +116,4 @@ if uploaded_file is not None:
                 os.remove(audio_path)
         except Exception as e:
             pass
+
