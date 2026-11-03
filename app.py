@@ -1,4 +1,5 @@
 import os
+import tempfile
 import streamlit as st
 import whisper
 import moviepy as mp
@@ -26,18 +27,21 @@ selected_lang_code = lang_code_map[target_lang]
 uploaded_file = st.file_uploader("ဗီဒီယိုဖိုင် တင်ပါ (MP4, MKV, MOV)", type=["mp4", "mkv", "mov"])
 
 if uploaded_file is not None:
-    video_path = "temp_video.mp4"
-    with open(video_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    # Use temporary files safely for cloud environments
+    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    tfile.write(uploaded_file.read())
+    video_path = tfile.name
     
-    st.video(video_path)
+    st.video(uploaded_file)
     
     if st.button("🚀 ဗီဒီယို ဘာသာပြန်ခြင်း စတင်ရန်"):
         with st.status("🔄 AI လုပ်ဆောင်နေပါပြီ...", expanded=True) as status:
             
             # Step 1: Extract Audio Safely
             st.write("🔊 ဗီဒီယိုမှ အသံဖိုင် (Audio) ကို ထုတ်ယူနေသည်...")
-            audio_path = "temp_audio.mp3"
+            audio_tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+            audio_path = audio_tfile.name
+            audio_tfile.close()
             
             video_clip = mp.VideoFileClip(video_path)
             audio_clip = video_clip.audio
@@ -94,14 +98,14 @@ if uploaded_file is not None:
             {txt}
             """)
             st.divider()
-
-        # Download Button for SRT File
+            # Download Button for SRT File
         st.download_button(
             label="📥 Subtitle ဖိုင် (.SRT) ကို Download ရယူရန်",
             data=srt_content,
             file_name="translated_subtitle.srt",
             mime="text/plain"
         )
+
         # Cleanup clips and temporary files safely
         try:
             if 'audio_clip' in locals() and audio_clip:
