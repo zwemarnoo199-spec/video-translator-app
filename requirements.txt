@@ -1,4 +1,5 @@
 streamlit
 openai-whisper
 moviepy
+httpx==0.27.2
 googletrans==4.0.0-rc1
