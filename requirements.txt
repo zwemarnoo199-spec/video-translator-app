@@ -1,4 +1,4 @@
 streamlit
 openai-whisper
 moviepy
-googletrans==3.1.0a0
+deep-translator
