@@ -5,10 +5,10 @@ import moviepy as mp
 from deep_translator import GoogleTranslator
 
 # Page Configuration
-st.set_page_config(page_title="Zwe Video Translation Studio", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="Zwe Video Translation", page_icon="🎬", layout="wide")
 
-st.title("🎬 Zwe Video Translation & Subtitle Studio")
-st.markdown("ဗီဒီယိုဖိုင် တင်လိုက်တာနဲ့ AI ကိုသုံးပြီး အလိုအလျောက် စာသားထုတ်၊ ဘာသာပြန်ပြီး Subtitle ထုတ်ပေးမယ့် ကိုယ်ပိုင် Web App ဖြစ်ပါတယ်။")
+st.title("🎬 Zwe Video Translation")
+st.markdown("ဗီဒီယိုဖိုင် တင်လိုက်တာနဲ့ AI ကိုသုံးပြီး အလိုအလျောက် စာသားထုတ်၊ ဘာသာပြန်ပြီး Subtitle ထုတ်ပေးမယ့် Web App ဖြစ်ပါတယ်။")
 
 # Sidebar - Settings
 st.sidebar.header("⚙️ Settings")
@@ -35,11 +35,13 @@ if uploaded_file is not None:
     if st.button("🚀 ဗီဒီယို ဘာသာပြန်ခြင်း စတင်ရန်"):
         with st.status("🔄 AI လုပ်ဆောင်နေပါပြီ...", expanded=True) as status:
             
-            # Step 1: Extract Audio
+            # Step 1: Extract Audio Safely
             st.write("🔊 ဗီဒီယိုမှ အသံဖိုင် (Audio) ကို ထုတ်ယူနေသည်...")
             audio_path = "temp_audio.mp3"
+            
             video_clip = mp.VideoFileClip(video_path)
-            video_clip.audio.write_audiofile(audio_path, logger=None)
+            audio_clip = video_clip.audio
+            audio_clip.write_audiofile(audio_path, logger=None)
             
             # Step 2: Speech to Text (Whisper)
             st.write(f"✍️ Whisper Model ({model_size}) ဖြင့် အသံများကို စာသားပြောင်းနေသည်...")
@@ -57,7 +59,7 @@ if uploaded_file is not None:
                 try:
                     translated_text = translator.translate(original_text)
                 except Exception:
-                    translated_text = original_text # Fallback if translation fails
+                    translated_text = original_text
                     
                 translated_segments.append({
                     "start": seg["start"],
@@ -100,9 +102,11 @@ if uploaded_file is not None:
             file_name="translated_subtitle.srt",
             mime="text/plain"
         )
-        # Cleanup temporary files safely
+        # Cleanup clips and temporary files safely
         try:
-            if 'video_clip' in locals():
+            if 'audio_clip' in locals() and audio_clip:
+                audio_clip.close()
+            if 'video_clip' in locals() and video_clip:
                 video_clip.close()
             if os.path.exists(video_path): 
                 os.remove(video_path)
@@ -110,4 +114,3 @@ if uploaded_file is not None:
                 os.remove(audio_path)
         except Exception as e:
             pass
-
