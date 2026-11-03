@@ -10,7 +10,7 @@ import moviepy as mp
 # Page Configuration
 st.set_page_config(page_title="Zwe Video Translation", page_icon="🎬", layout="wide")
 
-st.title("🎬 Zwe Video Translation")
+st.title("🎬 Zwe")
 st.markdown("ဗီဒီယိုဖိုင် တင်လိုက်တာနဲ့ AI ကိုသုံးပြီး အလိုအလျောက် စာသားထုတ်၊ ဘာသာပြန်ပြီး Subtitle ထုတ်ပေးမယ့် Web App ဖြစ်ပါတယ်။")
 
 # Sidebar - Settings
@@ -19,13 +19,12 @@ source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယိ�
 target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English"])
 model_size = st.sidebar.selectbox("AI Model Size (Whisper)", ["tiny", "base", "small"])
 
-# Target Language code for translation
+# Target Language code
 if "မြန်မာ" in target_lang:
     selected_lang_code = "my"
 else:
     selected_lang_code = "en"
 
-# Whisper compatible language codes (short codes only)
 source_lang_map = {
     "Chinese (တရုတ်)": "zh",
     "English (အင်္ဂလိပ်)": "en",
@@ -35,17 +34,17 @@ source_lang_map = {
 }
 selected_source_lang = source_lang_map[source_lang_option]
 
-# Direct free Google Translate function
+# Direct & Safe Google Translate function using standard urllib
 def translate_text(text, target='my'):
     if not text.strip():
         return text
     try:
         url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + target + "&dt=t&q=" + urllib.parse.quote(text)
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             result = json.loads(response.read().decode('utf-8'))
             translated = "".join([item[0] for item in result[0] if item[0]])
-            return translated
+            return translated if translated else text
     except Exception:
         return text
 
@@ -84,7 +83,7 @@ if uploaded_file is not None:
                 
             segments = result["segments"]
             
-            # Step 3: Translation using direct translation API
+            # Step 3: Translation
             st.write(f"🌍 စာသားများကို {target_lang} သို့ ဘာသာပြန်နေသည်...")
             
             translated_segments = []
@@ -98,7 +97,7 @@ if uploaded_file is not None:
                 translated_segments.append({
                     "start": seg["start"],
                     "end": seg["end"],
-                    "text": translated_text if translated_text else original_text
+                    "text": translated_text
                 })
             
             status.update(label="✅ အောင်မြင်စွာ ပြီးဆုံးပါပြီ!", state="complete", expanded=False)
@@ -147,4 +146,3 @@ if uploaded_file is not None:
                 os.remove(audio_path)
         except Exception as e:
             pass
-                
