@@ -1,4 +1,4 @@
 streamlit
 openai-whisper
 moviepy
-deep-translator
+imageio-ffmpeg
