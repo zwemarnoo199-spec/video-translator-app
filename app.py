@@ -1,9 +1,11 @@
 import os
 import tempfile
+import urllib.parse
+import urllib.request
+import json
 import streamlit as st
 import whisper
 import moviepy as mp
-from deep_translator import GoogleTranslator
 
 # Page Configuration
 st.set_page_config(page_title="Zwe Video Translation", page_icon="🎬", layout="wide")
@@ -13,24 +15,38 @@ st.markdown("ဗီဒီယိုဖိုင် တင်လိုက်တာ
 
 # Sidebar - Settings
 st.sidebar.header("⚙️ Settings")
-source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယို ဘာသာစကား (Source Language)", ["English (အင်္ဂလိပ်)", "Chinese (တရုတ်)", "Japanese (ဂျပန်)", "Korean (ကိုရီးယား)", "Auto-detect"])
+source_lang_option = st.sidebar.selectbox("မူရင်းဗီဒီယို ဘာသာစကား (Source Language)", ["Chinese (တရုတ်)", "English (အင်္ဂလိပ်)", "Japanese (ဂျပန်)", "Korean (ကိုရီးယား)", "Auto-detect"])
 target_lang = st.sidebar.selectbox("ဘာသာပြန်မည့် ဘာသာစကား (Target Language)", ["Burmese (မြန်မာ)", "English"])
 model_size = st.sidebar.selectbox("AI Model Size (Whisper)", ["tiny", "base", "small"])
 
-# Set target code for deep-translator
+# Target Language code
 if "မြန်မာ" in target_lang:
     selected_lang_code = "my"
 else:
     selected_lang_code = "en"
 
 source_lang_map = {
+    "Chinese (တရုတ်)": "zh-cn",
     "English (အင်္ဂလိပ်)": "en",
-    "Chinese (တရုတ်)": "zh-CN",
     "Japanese (ဂျပန်)": "ja",
     "Korean (ကိုရီးယား)": "ko",
     "Auto-detect": "auto"
 }
 selected_source_lang = source_lang_map[source_lang_option]
+
+# Direct free Google Translate function to avoid translation API blocks
+def translate_text(text, target='my'):
+    if not text.strip():
+        return text
+    try:
+        url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + target + "&dt=t&q=" + urllib.parse.quote(text)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            translated = "".join([item[0] for item in result[0] if item[0]])
+            return translated
+    except Exception:
+        return text
 
 # Main File Uploader
 uploaded_file = st.file_uploader("ဗီဒီယိုဖိုင် တင်ပါ (MP4, MKV, MOV)", type=["mp4", "mkv", "mov"])
@@ -61,14 +77,13 @@ if uploaded_file is not None:
             model = whisper.load_model(model_size)
             
             if selected_source_lang != "auto":
-                w_lang = selected_source_lang.split("-")[0].lower()
-                result = model.transcribe(audio_path, language=w_lang, fp16=False)
+                result = model.transcribe(audio_path, language=selected_source_lang, fp16=False)
             else:
                 result = model.transcribe(audio_path, fp16=False)
                 
             segments = result["segments"]
             
-            # Step 3: Translation using deep-translator
+            # Step 3: Translation using direct translation API
             st.write(f"🌍 စာသားများကို {target_lang} သို့ ဘာသာပြန်နေသည်...")
             
             translated_segments = []
@@ -77,12 +92,8 @@ if uploaded_file is not None:
                 original_text = seg["text"].strip()
                 if not original_text:
                     continue
-                try:
-                    # Translate using deep-translator
-                    translated_text = GoogleTranslator(source='auto', target=selected_lang_code).translate(original_text)
-                except Exception:
-                    translated_text = original_text
-                    
+                
+                translated_text = translate_text(original_text, target=selected_lang_code)
                 translated_segments.append({
                     "start": seg["start"],
                     "end": seg["end"],
@@ -92,6 +103,7 @@ if uploaded_file is not None:
             status.update(label="✅ အောင်မြင်စွာ ပြီးဆုံးပါပြီ!", state="complete", expanded=False)
         
         st.success("🎉 ဘာသာပြန်ခြင်း ပြီးစီးပါပြီ။ Subtitle များကို အောက်တွင် ကြည့်ရှုနိုင်ပါပြီ။")
+        
         # Display Subtitles
         st.subheader("📋 Generated Subtitles")
         
